@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAllParams = exports.setCryptoAmountParam = exports.setIsTradeParam = void 0;
 /* Locale modules */
 const utils_1 = require("../utils");
 const models_1 = require("../models");

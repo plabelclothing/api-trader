@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.setStartParams = exports.setServiceFee = exports.setBtcMinAmount = exports.setIsTrade = exports.getAll = exports.setCryptoAmount = void 0;
 const libs_1 = require("../libs");
 const enums_1 = require("../enums");
 const config_1 = __importDefault(require("./config"));

@@ -84,14 +84,18 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         let exchangeFromOrderBook = asks[0][0];
         let cryptoToBuy: number = new BigNumber(tradeConst.CRYPTO_BUY_AMOUNT[type]).toNumber();
 
-        /** if amount crypto is smaller than i want to buy **/
-        if (new BigNumber(asks[0][1]).toNumber() < tradeConst.CRYPTO_BUY_AMOUNT[type]) {
-            let sumExchange = 0;
-            for (let i = 0; i < 3; i++) {
-                sumExchange = new BigNumber(sumExchange).plus(new BigNumber(asks[i][0])).toNumber();
-            }
-            exchangeFromOrderBook = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
-        }
+        const exchangeFromOrderBookSale = new BigNumber(exchangeFromOrderBook).multipliedBy(0.01).toNumber();
+        exchangeFromOrderBook = new BigNumber(exchangeFromOrderBook).minus(new BigNumber(exchangeFromOrderBookSale)).toNumber();
+
+
+        // /** if amount crypto is smaller than i want to buy **/
+        // if (new BigNumber(asks[0][1]).toNumber() < tradeConst.CRYPTO_BUY_AMOUNT[type]) {
+        //     let sumExchange = 0;
+        //     for (let i = 0; i < 3; i++) {
+        //         sumExchange = new BigNumber(sumExchange).plus(new BigNumber(asks[i][0])).toNumber();
+        //     }
+        //     exchangeFromOrderBook = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
+        // }
 
         /** Check account balance default amount **/
         let defaultAmountBuyFiat: number = new BigNumber(exchangeFromOrderBook).multipliedBy(new BigNumber(cryptoToBuy)).toNumber();

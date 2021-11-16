@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.schemaValidator = void 0;
 const jsonschema_1 = require("jsonschema");
 const utils_1 = require("../utils");
 const schemaValidator = (schema, data) => {

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.statisticUtil = void 0;
 let timeRequest = {};
 let delayedMessage = 0;
 const statisticUtil = function () {

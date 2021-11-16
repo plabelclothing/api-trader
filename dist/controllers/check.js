@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.stats = exports.telemetry = exports.ping = void 0;
 /* Locale modules */
 const utils_1 = require("../utils");
 const ping = async (req, res) => {
