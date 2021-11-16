@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "baseUrl": "./src",
+        "target": "ES2017",
+        "module": "commonjs",
+        "outDir": "./dist",
+        "strict": true,
+        "esModuleInterop": true,
+        "typeRoots": [
+            "src/types",
+            "node_modules/@types"
+        ]
+    },
+    "exclude": [
+        "coverage",
+        "node_modules",
+        "dist",
+        "config/*.js",
+        "test"
+    ]
+}
