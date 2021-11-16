@@ -84,8 +84,8 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         let exchangeFromOrderBook = asks[0][0];
         let cryptoToBuy: number = new BigNumber(tradeConst.CRYPTO_BUY_AMOUNT[type]).toNumber();
 
-        const exchangeFromOrderBookSale = new BigNumber(exchangeFromOrderBook).multipliedBy(0.01).toNumber();
-        exchangeFromOrderBook = new BigNumber(exchangeFromOrderBook).minus(new BigNumber(exchangeFromOrderBookSale)).toFixed(2);
+        // const exchangeFromOrderBookSale = new BigNumber(exchangeFromOrderBook).multipliedBy(0.01).toNumber();
+        // exchangeFromOrderBook = new BigNumber(exchangeFromOrderBook).minus(new BigNumber(exchangeFromOrderBookSale)).toFixed(2);
 
 
         // /** if amount crypto is smaller than i want to buy **/
