@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.setBTCAmountSchema = exports.isTradeSchema = void 0;
 const enums_1 = require("../enums");
 const isTradeSchema = {
     type: 'object',

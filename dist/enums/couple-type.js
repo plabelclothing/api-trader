@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CoupleTypeMap = exports.CoupleTypeIsTrade = exports.CoupleType = void 0;
 var CoupleType;
 (function (CoupleType) {
     CoupleType["BTC_USD"] = "BTC-USD";

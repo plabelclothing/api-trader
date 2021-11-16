@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.sellCrypto = exports.buyCrypto = void 0;
 /** External modules **/
 const axios_1 = __importDefault(require("axios"));
 const bignumber_js_1 = __importDefault(require("bignumber.js"));
@@ -73,14 +74,16 @@ const buyCrypto = async (type) => {
         const asks = resultOfGetOrderBook.data.asks;
         let exchangeFromOrderBook = asks[0][0];
         let cryptoToBuy = new bignumber_js_1.default(tradeConst.CRYPTO_BUY_AMOUNT[type]).toNumber();
-        /** if amount crypto is smaller than i want to buy **/
-        if (new bignumber_js_1.default(asks[0][1]).toNumber() < tradeConst.CRYPTO_BUY_AMOUNT[type]) {
-            let sumExchange = 0;
-            for (let i = 0; i < 3; i++) {
-                sumExchange = new bignumber_js_1.default(sumExchange).plus(new bignumber_js_1.default(asks[i][0])).toNumber();
-            }
-            exchangeFromOrderBook = new bignumber_js_1.default(sumExchange).dividedBy(3).toFixed(2);
-        }
+        const exchangeFromOrderBookSale = new bignumber_js_1.default(exchangeFromOrderBook).multipliedBy(0.01).toNumber();
+        exchangeFromOrderBook = new bignumber_js_1.default(exchangeFromOrderBook).minus(new bignumber_js_1.default(exchangeFromOrderBookSale)).toNumber();
+        // /** if amount crypto is smaller than i want to buy **/
+        // if (new BigNumber(asks[0][1]).toNumber() < tradeConst.CRYPTO_BUY_AMOUNT[type]) {
+        //     let sumExchange = 0;
+        //     for (let i = 0; i < 3; i++) {
+        //         sumExchange = new BigNumber(sumExchange).plus(new BigNumber(asks[i][0])).toNumber();
+        //     }
+        //     exchangeFromOrderBook = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
+        // }
         /** Check account balance default amount **/
         let defaultAmountBuyFiat = new bignumber_js_1.default(exchangeFromOrderBook).multipliedBy(new bignumber_js_1.default(cryptoToBuy)).toNumber();
         let defaultAmountBuyFiatFee = new bignumber_js_1.default(defaultAmountBuyFiat).multipliedBy(new bignumber_js_1.default(tradeConst.EXT_SERVICE_FEE)).toNumber();

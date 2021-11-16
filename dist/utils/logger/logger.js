@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.logger = void 0;
 const winston_1 = require("winston");
 const transport_1 = __importDefault(require("winston-transport-sentry-node/dist/transport"));
 const config_1 = __importDefault(require("../../bin/config"));

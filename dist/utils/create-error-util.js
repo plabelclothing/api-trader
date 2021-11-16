@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ResponseThrowError = void 0;
 const logger_1 = require("./logger");
 class ResponseThrowError extends Error {
     // eslint-disable-next-line complexity
     constructor(data) {
-        var _a;
         super();
         this.name = data.name || this.name;
         this.message = data.message || '';
-        this.statusCode = ((_a = data) === null || _a === void 0 ? void 0 : _a.statusCode) || 500;
+        this.statusCode = (data === null || data === void 0 ? void 0 : data.statusCode) || 500;
         if (data.logger) {
             logger_1.logger.log(data.logger, logger_1.loggerMessage(data));
         }
