@@ -5,6 +5,7 @@ export declare module Bin {
         BTC_MIN_AMOUNT: number,
         EXT_SERVICE_FEE: number,
         SERVICE_FEE: number,
+        ACCOUNTS_ID: { [key: string]: string },
     }
 
     interface IsTrade {

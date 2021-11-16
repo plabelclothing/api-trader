@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const amqplib_1 = __importDefault(require("amqplib"));
 /* Local modules */
 const config_1 = __importDefault(require("./config"));
+const libs_1 = require("../libs");
 const utils_1 = require("../utils");
 let numOfServer = 0;
 let isRestart = false;
@@ -43,9 +44,9 @@ const consumer = async function (channel) {
             if (!message) {
                 return;
             }
-            let payoutContent = null;
+            let transactionContent = null;
             try {
-                payoutContent = JSON.parse(message.content.toString());
+                transactionContent = JSON.parse(message.content.toString());
             }
             catch (e) {
                 utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
@@ -55,30 +56,9 @@ const consumer = async function (channel) {
                 }));
                 return channel.ack(message);
             }
-            if (!payoutContent.hasOwnProperty('isRefund')) {
-                utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
-                    message: 'isRefund flag is not found.',
-                    errorCode: "SRC-RABBIT-002-TSCERR" /* RABBIT_SERVICE__TSK_ERR */,
-                }));
-                return channel.ack(message);
-            }
-            // try {
-            //     let schema: { [key: string]: any } = payoutSaleSchema;
-            //     if (payoutContent.isRefund) {
-            //         schema = payoutRefundSchema;
-            //     }
-            //     await schemaValidator(schema, payoutContent);
-            // } catch (e) {
-            //     logger.log(LoggerLevel.WARN, loggerMessage({
-            //         message: 'Incorrect task content! Does not match the pattern.',
-            //         errorCode: StatusCode.VALIDATION_UTIL__ERR,
-            //         error: e
-            //     }));
-            //     return channel.ack(message);
-            // }
             utils_1.logger.log("verbose" /* VERBOSE */, utils_1.loggerMessage({ message: 'New correct task has been received and going to be processed.' }));
             try {
-                // await sendLib(payoutContent);
+                await libs_1.sellCrypto(transactionContent);
                 channel.ack(message);
             }
             catch (e) {
@@ -180,3 +160,4 @@ const startRabbit = async () => {
         await restartRabbitFunc();
     }
 };
+startRabbit();

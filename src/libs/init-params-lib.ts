@@ -40,6 +40,42 @@ const getMinAmount = async (type: string) => {
 };
 
 /**
+ * Get min trade amount
+ */
+const getAccountsId = async () => {
+    try {
+        const timestamp = Date.now() / 1000;
+        const passphrase = config.coinbase.passphrase;
+        const requestPath = `/accounts`;
+        const method = 'GET';
+
+        const sign = await signUtil(timestamp, requestPath, null, method);
+
+        const result = await axios({
+            url: `${config.coinbase.host}${requestPath}`,
+            method,
+            headers: {
+                'Accept': 'application/json',
+                'cb-access-key': config.coinbase.key,
+                'cb-access-passphrase': passphrase,
+                'cb-access-sign': sign,
+                'cb-access-timestamp': timestamp
+            }
+        });
+
+        let objAccount: { [key: string]: string } = {};
+
+        result.data.forEach((val: { [key: string]: any }) => {
+            objAccount[val.currency] = val.id;
+        });
+
+        return objAccount;
+    } catch (e) {
+        throw e;
+    }
+};
+
+/**
  * Get fee
  */
 const getFee = async () => {
@@ -75,4 +111,5 @@ const getFee = async () => {
 export {
     getMinAmount,
     getFee,
+    getAccountsId,
 }

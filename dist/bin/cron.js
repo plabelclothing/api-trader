@@ -43,6 +43,32 @@ const updateExtFee = new cron_1.CronJob('0 0 */2 * * *', async () => {
     }
 }, null, true, config_1.default.luxon.timezone);
 /** End region update trade const **/
+/** Region trade cron **/
+const tradeBtcEur = new cron_1.CronJob('*/9 * * * * *', async () => {
+    try {
+        await libs_1.buyCrypto(enums_1.CoupleTypeIsTrade.BTC_EUR);
+    }
+    catch (error) {
+        utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
+            message: 'Buy crypto BTC-EUR is not success',
+            error,
+        }));
+    }
+}, null, true, config_1.default.luxon.timezone);
+const tradeBtcUsd = new cron_1.CronJob('*/10 * * * * *', async () => {
+    try {
+        await libs_1.buyCrypto(enums_1.CoupleTypeIsTrade.BTC_USD);
+    }
+    catch (error) {
+        utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
+            message: 'Buy crypto BTC-USD is not success',
+            error,
+        }));
+    }
+}, null, true, config_1.default.luxon.timezone);
+/** End region trade cron **/
 /** Start crons **/
 updateMinSellBTC.start();
 updateExtFee.start();
+tradeBtcEur.start();
+tradeBtcUsd.start();

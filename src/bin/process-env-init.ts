@@ -1,13 +1,14 @@
 /** Locale variables **/
 import {Bin} from '../types/bin';
-import {getMinAmount, getFee} from '../libs';
+import {getMinAmount, getFee, getAccountsId} from '../libs';
 import {CoupleType} from '../enums';
 import config from './config';
 
 /** Init RAM variables **/
 const TRADE_CONST: Bin.ProcessTradeConst = {
     CRYPTO_BUY_AMOUNT: {
-        BTC: config.trade.cryptoBuyAmount.btc,
+        BTC_USD: config.trade.cryptoBuyAmount.btcUsd,
+        BTC_EUR: config.trade.cryptoBuyAmount.btcEur,
     },
     IS_TRADE: {
         BTC_EUR: config.trade.isTrade.btcEur,
@@ -16,6 +17,7 @@ const TRADE_CONST: Bin.ProcessTradeConst = {
     BTC_MIN_AMOUNT: 0.00002100,
     EXT_SERVICE_FEE: 0.005,
     SERVICE_FEE: config.trade.serviceFee,
+    ACCOUNTS_ID: {},
 };
 
 /**
@@ -30,6 +32,10 @@ const setStartParams = async () => {
         /** Set fee **/
         const resultFee = await getFee();
         TRADE_CONST.EXT_SERVICE_FEE = resultFee;
+
+        /** Set account ids **/
+        const accountIds = await getAccountsId();
+        TRADE_CONST.ACCOUNTS_ID = accountIds;
     } catch (e) {
         throw e;
     }

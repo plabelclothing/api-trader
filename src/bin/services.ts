@@ -5,7 +5,8 @@ import amqpApi, {ConfirmChannel} from 'amqplib';
 
 /* Local modules */
 import config from './config';
-import {logger, loggerMessage, RabbitUtil, statisticUtil, schemaValidator} from '../utils';
+import {sellCrypto} from '../libs';
+import {logger, loggerMessage, RabbitUtil, statisticUtil} from '../utils';
 import {LoggerLevel, StatusCode} from '../enums';
 
 let numOfServer = 0;
@@ -46,9 +47,9 @@ const consumer = async function (channel: ConfirmChannel) {
                 return;
             }
 
-            let payoutContent = null;
+            let transactionContent = null;
             try {
-                payoutContent = JSON.parse(message.content.toString());
+                transactionContent = JSON.parse(message.content.toString());
             } catch (e) {
                 logger.log(LoggerLevel.ERROR, loggerMessage({
                     message: 'Delivered data are not a correct JSON string.',
@@ -58,32 +59,9 @@ const consumer = async function (channel: ConfirmChannel) {
                 return channel.ack(message);
             }
 
-            if (!payoutContent.hasOwnProperty('isRefund')) {
-                logger.log(LoggerLevel.ERROR, loggerMessage({
-                    message: 'isRefund flag is not found.',
-                    errorCode: StatusCode.RABBIT_SERVICE__TSK_ERR,
-                }));
-                return channel.ack(message);
-            }
-
-            // try {
-            //     let schema: { [key: string]: any } = payoutSaleSchema;
-            //     if (payoutContent.isRefund) {
-            //         schema = payoutRefundSchema;
-            //     }
-            //     await schemaValidator(schema, payoutContent);
-            // } catch (e) {
-            //     logger.log(LoggerLevel.WARN, loggerMessage({
-            //         message: 'Incorrect task content! Does not match the pattern.',
-            //         errorCode: StatusCode.VALIDATION_UTIL__ERR,
-            //         error: e
-            //     }));
-            //     return channel.ack(message);
-            // }
-
             logger.log(LoggerLevel.VERBOSE, loggerMessage({message: 'New correct task has been received and going to be processed.'}));
             try {
-                // await sendLib(payoutContent);
+                await sellCrypto(transactionContent);
                 channel.ack(message);
             } catch (e) {
                 logger.log(LoggerLevel.ERROR, loggerMessage({
@@ -189,4 +167,4 @@ const startRabbit = async () => {
     }
 };
 
-// startRabbit();
+startRabbit();

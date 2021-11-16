@@ -15,7 +15,7 @@ const signUtil = (timestamp: number, requestPath: string, body: null | { [key: s
     try {
         let message = timestamp + method + requestPath;
         if (body) {
-            message += body;
+            message += JSON.stringify(body);
         }
         const key = Buffer.from(config.coinbase.secret, 'base64');
         const hmac = crypto.createHmac('sha256', key);

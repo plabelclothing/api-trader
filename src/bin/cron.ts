@@ -3,8 +3,8 @@ import {CronJob} from 'cron';
 
 /** Locale modules **/
 import config from './config';
-import {getMinAmount, getFee} from '../libs';
-import {CoupleType, LoggerLevel} from '../enums';
+import {getMinAmount, getFee, buyCrypto} from '../libs';
+import {CoupleType, CoupleTypeIsTrade, LoggerLevel} from '../enums';
 import {setBtcMinAmount, setServiceFee} from './process-env-init';
 import {logger, loggerMessage} from '../utils';
 
@@ -42,6 +42,34 @@ const updateExtFee = new CronJob('0 0 */2 * * *', async () => {
 
 /** End region update trade const **/
 
+/** Region trade cron **/
+
+const tradeBtcEur = new CronJob('*/9 * * * * *', async () => {
+    try {
+        await buyCrypto(CoupleTypeIsTrade.BTC_EUR);
+    } catch (error) {
+        logger.log(LoggerLevel.ERROR, loggerMessage({
+            message: 'Buy crypto BTC-EUR is not success',
+            error,
+        }));
+    }
+}, null, true, config.luxon.timezone);
+
+const tradeBtcUsd = new CronJob('*/10 * * * * *', async () => {
+    try {
+        await buyCrypto(CoupleTypeIsTrade.BTC_USD);
+    } catch (error) {
+        logger.log(LoggerLevel.ERROR, loggerMessage({
+            message: 'Buy crypto BTC-USD is not success',
+            error,
+        }));
+    }
+}, null, true, config.luxon.timezone);
+
+/** End region trade cron **/
+
 /** Start crons **/
 updateMinSellBTC.start();
 updateExtFee.start();
+tradeBtcEur.start();
+tradeBtcUsd.start();

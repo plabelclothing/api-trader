@@ -9,7 +9,8 @@ const config_1 = __importDefault(require("./config"));
 /** Init RAM variables **/
 const TRADE_CONST = {
     CRYPTO_BUY_AMOUNT: {
-        BTC: config_1.default.trade.cryptoBuyAmount.btc,
+        BTC_USD: config_1.default.trade.cryptoBuyAmount.btcUsd,
+        BTC_EUR: config_1.default.trade.cryptoBuyAmount.btcEur,
     },
     IS_TRADE: {
         BTC_EUR: config_1.default.trade.isTrade.btcEur,
@@ -18,6 +19,7 @@ const TRADE_CONST = {
     BTC_MIN_AMOUNT: 0.00002100,
     EXT_SERVICE_FEE: 0.005,
     SERVICE_FEE: config_1.default.trade.serviceFee,
+    ACCOUNTS_ID: {},
 };
 /**
  * Set start params
@@ -30,6 +32,9 @@ const setStartParams = async () => {
         /** Set fee **/
         const resultFee = await libs_1.getFee();
         TRADE_CONST.EXT_SERVICE_FEE = resultFee;
+        /** Set account ids **/
+        const accountIds = await libs_1.getAccountsId();
+        TRADE_CONST.ACCOUNTS_ID = accountIds;
     }
     catch (e) {
         throw e;

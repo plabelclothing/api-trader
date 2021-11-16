@@ -42,7 +42,8 @@ config.coinbase = {
 
 config.trade = {
 	cryptoBuyAmount: {
-		btc: '{{ api_trader_trade_btc_buy_amount }}',
+		btcUsd: '{{ api_trader_trade_btc_usd_buy_amount }}',
+		btcEur: '{{ api_trader_trade_btc_eur_buy_amount }}',
 	},
 	isTrade:         {
 		btcEur: {{ api_trader_trade_is_trade_btc_eur }},

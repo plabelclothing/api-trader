@@ -19,8 +19,8 @@ config.rabbitMQ = {
 		exchange: 'trader_dlx',
 	},
 	deadLetterQueue:    {
-		key: 'trader_dlx_queue60',
-		ttl: 60000
+		key: 'trader_dlx_queue10',
+		ttl: 10000
 	},
 	channel:            'trader',
 	exchange:           'trader_default',
@@ -76,7 +76,8 @@ config.coinbase = {
 
 config.trade = {
 	cryptoBuyAmount: {
-		btc: 0,
+		btcEur: 0,
+		btcUsd: 0,
 	},
 	isTrade:         {
 		btcEur: false,
