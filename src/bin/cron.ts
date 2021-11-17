@@ -59,7 +59,6 @@ const tradeBtcUsd = new CronJob('*/10 * * * * *', async () => {
     try {
         await buyCrypto(CoupleTypeIsTrade.BTC_USD);
     } catch (error) {
-        console.log(JSON.stringify(error));
         logger.log(LoggerLevel.ERROR, loggerMessage({
             message: 'Buy crypto BTC-USD is not success',
             error,
