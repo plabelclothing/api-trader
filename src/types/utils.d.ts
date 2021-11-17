@@ -9,4 +9,9 @@ export declare module Utils {
         timestamp: number,
         expiration?: number,
     }
+
+    export interface WaitTrxObj {
+        a: number,
+        p: number,
+    }
 }

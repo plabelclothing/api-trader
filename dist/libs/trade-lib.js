@@ -49,9 +49,7 @@ const buyCrypto = async (type) => {
         });
         const accountBalance = new bignumber_js_1.default(resultOfGetBalance.data.available).toNumber();
         if (accountBalance <= 0) {
-            return utils_1.logger.log("warn" /* WARN */, utils_1.loggerMessage({
-                message: `Account ${type} ${accountId} is broke, step.1`,
-            }));
+            return;
         }
         /** Get order book **/
         const timestampOrderBook = Date.now() / 1000;
@@ -90,9 +88,7 @@ const buyCrypto = async (type) => {
             defaultAmountBuyFiatFee = new bignumber_js_1.default(defaultAmountBuyFiat).multipliedBy(new bignumber_js_1.default(tradeConst.EXT_SERVICE_FEE)).toNumber();
             defaultAmountBuyFiatWithFee = new bignumber_js_1.default(defaultAmountBuyFiatFee).plus(new bignumber_js_1.default(defaultAmountBuyFiat)).toNumber();
             if (defaultAmountBuyFiatWithFee > accountBalance) {
-                return utils_1.logger.log("warn" /* WARN */, utils_1.loggerMessage({
-                    message: `Account ${type} ${accountId} is broke, step.2`,
-                }));
+                return;
             }
         }
         /** Create an order **/
@@ -126,15 +122,9 @@ const buyCrypto = async (type) => {
             },
             data: bodyOrder,
         });
-        /** Create a future exchange price **/
-        const futureAmountWithServiceFee = new bignumber_js_1.default(defaultAmountBuyFiatWithFee).multipliedBy(tradeConst.SERVICE_FEE).plus(new bignumber_js_1.default(defaultAmountBuyFiatWithFee)).toNumber();
-        const futureAmountWithExtServiceFee = new bignumber_js_1.default(futureAmountWithServiceFee).multipliedBy(tradeConst.EXT_SERVICE_FEE).plus(new bignumber_js_1.default(futureAmountWithServiceFee)).toNumber();
-        const futureExchange = new bignumber_js_1.default(futureAmountWithExtServiceFee).dividedBy(new bignumber_js_1.default(cryptoToBuy)).toFixed(2);
         /** Send to rabbit **/
         const objRabbit = {
             i: transactionId,
-            e: futureExchange,
-            c: 0,
         };
         try {
             await utils_1.RabbitUtil.sendToRabbit(objRabbit, {
@@ -144,7 +134,7 @@ const buyCrypto = async (type) => {
         }
         catch (e) {
             utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
-                message: `Crypto deal ${type} is not send to rabbit. Id: ${transactionId}, future price: ${futureExchange}`,
+                message: `Crypto deal ${type} is not send to rabbit. Id: ${transactionId}`,
             }));
         }
     }
@@ -159,6 +149,7 @@ exports.buyCrypto = buyCrypto;
  */
 const sellCrypto = async (objRabbit) => {
     try {
+        const tradeConst = process_env_init_1.getAll();
         const passphrase = config_1.default.coinbase.passphrase;
         /** Get order info **/
         const timestampOrder = Date.now() / 1000;
@@ -176,9 +167,9 @@ const sellCrypto = async (objRabbit) => {
                 'cb-access-timestamp': timestampOrder
             }
         });
-        if (resultOfGetOrder.data.done_reason !== 'filled' && objRabbit.c < 7) {
+        const finalStatus = [enums_1.StatusTransaction.DONE, enums_1.StatusTransaction.REJECTED];
+        if (!finalStatus.includes(resultOfGetOrder.data.status)) {
             try {
-                objRabbit.c++;
                 return utils_1.RabbitUtil.sendToRabbit(objRabbit, {
                     delay: config_1.default.rabbitMQ.deadLetterQueue.ttl,
                     routingKey: config_1.default.rabbitMQ.deadLetterQueue.key,
@@ -186,15 +177,29 @@ const sellCrypto = async (objRabbit) => {
             }
             catch (e) {
                 utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
-                    message: `Crypto deal ${resultOfGetOrder.data.product_id} is not send to rabbit. Id: ${objRabbit.i}, future price: ${objRabbit.e}`,
+                    message: `Crypto deal ${resultOfGetOrder.data.product_id} is not send to rabbit. Id: ${objRabbit.i}`,
                 }));
             }
         }
-        const boughtCrypto = new bignumber_js_1.default(resultOfGetOrder.data.size).toNumber();
+        let boughtCrypto = new bignumber_js_1.default(resultOfGetOrder.data.filled_size).toNumber();
         if (boughtCrypto <= 0) {
-            return utils_1.logger.log("warn" /* WARN */, utils_1.loggerMessage({
-                message: `Transaction is not success ${objRabbit.i}`,
-            }));
+            return;
+        }
+        /** Create price **/
+        const fillFees = new bignumber_js_1.default(resultOfGetOrder.data.fill_fees).toNumber();
+        const buyPrice = new bignumber_js_1.default(resultOfGetOrder.data.price).toNumber();
+        const buyPriceWithFees = new bignumber_js_1.default(buyPrice).multipliedBy(new bignumber_js_1.default(boughtCrypto)).plus(new bignumber_js_1.default(fillFees)).toNumber();
+        const priceWithServiceFee = new bignumber_js_1.default(buyPriceWithFees).multipliedBy(tradeConst.SERVICE_FEE).plus(new bignumber_js_1.default(buyPriceWithFees)).toNumber();
+        const priceWithExtFee = new bignumber_js_1.default(priceWithServiceFee).multipliedBy(tradeConst.EXT_SERVICE_FEE).plus(new bignumber_js_1.default(priceWithServiceFee)).toNumber();
+        let finalPrice = new bignumber_js_1.default(priceWithExtFee).dividedBy(boughtCrypto).toFixed(2);
+        /** If bought crypto is smaller than crypto Min **/
+        if (boughtCrypto < tradeConst.BTC_MIN_AMOUNT) {
+            const resultOfWaitTransaction = utils_1.waitTrxUtil(new bignumber_js_1.default(finalPrice).toNumber(), boughtCrypto);
+            if (!resultOfWaitTransaction.length) {
+                return;
+            }
+            boughtCrypto = resultOfWaitTransaction[0].a;
+            finalPrice = new bignumber_js_1.default(resultOfWaitTransaction[0].p).toFixed(2);
         }
         /** Create a sell order **/
         const transactionId = uuid_1.v4();
@@ -210,7 +215,7 @@ const sellCrypto = async (objRabbit) => {
             post_only: 'false',
             product_id: resultOfGetOrder.data.product_id,
             size: boughtCrypto,
-            price: objRabbit.e,
+            price: finalPrice,
             client_oid: transactionId,
         };
         const signOrderSell = await utils_1.signUtil(timestampOrderSell, requestPathOrderSell, bodyOrderSell, methodOrderSell);
@@ -228,7 +233,6 @@ const sellCrypto = async (objRabbit) => {
         });
     }
     catch (e) {
-        console.log(JSON.stringify(e));
         throw e;
     }
 };

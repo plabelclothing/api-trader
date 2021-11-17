@@ -4,3 +4,4 @@ export * from './statistic-util';
 export * from './validation-util';
 export * from './rabbit-util';
 export * from './sign-util';
+export * from './wait-trx-util';

@@ -6,10 +6,17 @@ import {v4} from 'uuid';
 /** Locale modules **/
 import {getAll} from '../bin/process-env-init';
 import {Bin} from '../types/bin';
-import {CoupleTypeIsTrade, CoupleTypeMap, LoggerLevel, CoupleType} from '../enums';
+import {
+    CoupleTypeIsTrade,
+    CoupleTypeMap,
+    LoggerLevel,
+    CoupleType,
+    StatusTransaction,
+} from '../enums';
 import config from '../bin/config';
-import {logger, loggerMessage, signUtil, RabbitUtil} from '../utils';
+import {logger, loggerMessage, signUtil, RabbitUtil, waitTrxUtil} from '../utils';
 import {Libs} from '../types/libs';
+import {Utils} from "../types/utils";
 
 /**
  * Buy the crypto
@@ -55,9 +62,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         const accountBalance = new BigNumber(resultOfGetBalance.data.available).toNumber();
 
         if (accountBalance <= 0) {
-            return logger.log(LoggerLevel.WARN, loggerMessage({
-                message: `Account ${type} ${accountId} is broke, step.1`,
-            }));
+            return;
         }
 
         /** Get order book **/
@@ -106,9 +111,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
             defaultAmountBuyFiatWithFee = new BigNumber(defaultAmountBuyFiatFee).plus(new BigNumber(defaultAmountBuyFiat)).toNumber();
 
             if (defaultAmountBuyFiatWithFee > accountBalance) {
-                return logger.log(LoggerLevel.WARN, loggerMessage({
-                    message: `Account ${type} ${accountId} is broke, step.2`,
-                }));
+                return;
             }
         }
 
@@ -146,16 +149,9 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
             data: bodyOrder,
         });
 
-        /** Create a future exchange price **/
-        const futureAmountWithServiceFee: number = new BigNumber(defaultAmountBuyFiatWithFee).multipliedBy(tradeConst.SERVICE_FEE).plus(new BigNumber(defaultAmountBuyFiatWithFee)).toNumber();
-        const futureAmountWithExtServiceFee: number = new BigNumber(futureAmountWithServiceFee).multipliedBy(tradeConst.EXT_SERVICE_FEE).plus(new BigNumber(futureAmountWithServiceFee)).toNumber();
-        const futureExchange = new BigNumber(futureAmountWithExtServiceFee).dividedBy(new BigNumber(cryptoToBuy)).toFixed(2);
-
         /** Send to rabbit **/
         const objRabbit: Libs.ObjRabbit = {
             i: transactionId,
-            e: futureExchange,
-            c: 0,
         };
 
         try {
@@ -165,7 +161,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
             });
         } catch (e) {
             logger.log(LoggerLevel.ERROR, loggerMessage({
-                message: `Crypto deal ${type} is not send to rabbit. Id: ${transactionId}, future price: ${futureExchange}`,
+                message: `Crypto deal ${type} is not send to rabbit. Id: ${transactionId}`,
             }));
         }
     } catch (e) {
@@ -179,6 +175,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
  */
 const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
     try {
+        const tradeConst: Bin.ProcessTradeConst = getAll();
         const passphrase = config.coinbase.passphrase;
 
         /** Get order info **/
@@ -200,26 +197,43 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
             }
         });
 
-        if (resultOfGetOrder.data.done_reason !== 'filled' && objRabbit.c < 7) {
+        const finalStatus = [StatusTransaction.DONE, StatusTransaction.REJECTED];
+
+        if (!finalStatus.includes(resultOfGetOrder.data.status)) {
             try {
-                objRabbit.c++;
                 return RabbitUtil.sendToRabbit(objRabbit, {
                     delay: config.rabbitMQ.deadLetterQueue.ttl,
                     routingKey: config.rabbitMQ.deadLetterQueue.key,
                 });
             } catch (e) {
                 logger.log(LoggerLevel.ERROR, loggerMessage({
-                    message: `Crypto deal ${resultOfGetOrder.data.product_id} is not send to rabbit. Id: ${objRabbit.i}, future price: ${objRabbit.e}`,
+                    message: `Crypto deal ${resultOfGetOrder.data.product_id} is not send to rabbit. Id: ${objRabbit.i}`,
                 }));
             }
         }
 
-        const boughtCrypto = new BigNumber(resultOfGetOrder.data.size).toNumber();
+        let boughtCrypto = new BigNumber(resultOfGetOrder.data.filled_size).toNumber();
 
         if (boughtCrypto <= 0) {
-            return logger.log(LoggerLevel.WARN, loggerMessage({
-                message: `Transaction is not success ${objRabbit.i}`,
-            }));
+            return;
+        }
+
+        /** Create price **/
+        const fillFees = new BigNumber(resultOfGetOrder.data.fill_fees).toNumber();
+        const buyPrice = new BigNumber(resultOfGetOrder.data.price).toNumber();
+        const buyPriceWithFees = new BigNumber(buyPrice).multipliedBy(new BigNumber(boughtCrypto)).plus(new BigNumber(fillFees)).toNumber();
+        const priceWithServiceFee = new BigNumber(buyPriceWithFees).multipliedBy(tradeConst.SERVICE_FEE).plus(new BigNumber(buyPriceWithFees)).toNumber();
+        const priceWithExtFee = new BigNumber(priceWithServiceFee).multipliedBy(tradeConst.EXT_SERVICE_FEE).plus(new BigNumber(priceWithServiceFee)).toNumber();
+        let finalPrice = new BigNumber(priceWithExtFee).dividedBy(boughtCrypto).toFixed(2);
+
+        /** If bought crypto is smaller than crypto Min **/
+        if (boughtCrypto < tradeConst.BTC_MIN_AMOUNT) {
+            const resultOfWaitTransaction = <Utils.WaitTrxObj[]>waitTrxUtil(new BigNumber(finalPrice).toNumber(), boughtCrypto);
+            if (!resultOfWaitTransaction.length) {
+                return;
+            }
+            boughtCrypto = resultOfWaitTransaction[0].a;
+            finalPrice = new BigNumber(resultOfWaitTransaction[0].p).toFixed(2);
         }
 
         /** Create a sell order **/
@@ -236,7 +250,7 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
             post_only: 'false',
             product_id: resultOfGetOrder.data.product_id,
             size: boughtCrypto,
-            price: objRabbit.e,
+            price: finalPrice,
             client_oid: transactionId,
         };
 
@@ -256,7 +270,6 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
         });
 
     } catch (e) {
-        console.log(JSON.stringify(e));
         throw e;
     }
 };

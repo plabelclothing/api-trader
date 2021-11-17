@@ -86,4 +86,8 @@ config.trade = {
 	serviceFee:      0,
 };
 
+config.assets = {
+	waitTransactionFilePath: ''
+};
+
 module.exports = config;

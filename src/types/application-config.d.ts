@@ -109,6 +109,10 @@ declare module ApplicationConfig {
         serviceFee: number,
     }
 
+    interface Assets {
+        waitTransactionFilePath: string,
+    }
+
     export interface RootObject {
         application: string;
         applicationKey: string;
@@ -119,6 +123,7 @@ declare module ApplicationConfig {
         rabbitMQ: RabbitMQ;
         coinbase: CoinBase;
         trade: Trade;
+        assets: Assets;
     }
 
 }

@@ -9,3 +9,4 @@ __export(require("./statistic-util"));
 __export(require("./validation-util"));
 __export(require("./rabbit-util"));
 __export(require("./sign-util"));
+__export(require("./wait-trx-util"));
