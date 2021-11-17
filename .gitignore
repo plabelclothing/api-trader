@@ -23,6 +23,5 @@ config/server.development.js
 config/sender.config.json
 package-lock.json
 temp/**
-/dist/
 coverage/
 .nyc_output/

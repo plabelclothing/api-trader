@@ -62,7 +62,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
 
         /** Get order book **/
         const timestampOrderBook = Date.now() / 1000;
-        const requestPathOrderBook = `/products/${coupleType}/book?level=2`;
+        const requestPathOrderBook = `/products/${coupleType}/book?level=1`;
         const methodOrderBook = 'GET';
 
         const signOrderBook = await signUtil(timestampOrderBook, requestPathOrderBook, null, methodOrderBook);
@@ -81,11 +81,20 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
 
         /** Get asks **/
         const asks: [any] = resultOfGetOrderBook.data.asks;
-        let exchangeFromOrderBook = asks[0][0];
+        const bids: [any] = resultOfGetOrderBook.data.bids;
+        let bestAks = asks[0][0];
+        let finalExchange = bids[0][0];
+
+        finalExchange = new BigNumber(finalExchange).plus(1).toFixed(2);
+
+        if (finalExchange >= bestAks) {
+            return;
+        }
+
         let cryptoToBuy: number = new BigNumber(tradeConst.CRYPTO_BUY_AMOUNT[type]).toNumber();
 
-        // const exchangeFromOrderBookSale = new BigNumber(exchangeFromOrderBook).multipliedBy(0.01).toNumber();
-        // exchangeFromOrderBook = new BigNumber(exchangeFromOrderBook).minus(new BigNumber(exchangeFromOrderBookSale)).toFixed(2);
+        // const exchangeFromOrderBookSale = new BigNumber(finalExchange).multipliedBy(0.01).toNumber();
+        // finalExchange = new BigNumber(finalExchange).minus(new BigNumber(exchangeFromOrderBookSale)).toFixed(2);
 
 
         // /** if amount crypto is smaller than i want to buy **/
@@ -94,18 +103,18 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         //     for (let i = 0; i < 3; i++) {
         //         sumExchange = new BigNumber(sumExchange).plus(new BigNumber(asks[i][0])).toNumber();
         //     }
-        //     exchangeFromOrderBook = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
+        //     finalExchange = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
         // }
 
         /** Check account balance default amount **/
-        let defaultAmountBuyFiat: number = new BigNumber(exchangeFromOrderBook).multipliedBy(new BigNumber(cryptoToBuy)).toNumber();
+        let defaultAmountBuyFiat: number = new BigNumber(finalExchange).multipliedBy(new BigNumber(cryptoToBuy)).toNumber();
         let defaultAmountBuyFiatFee: number = new BigNumber(defaultAmountBuyFiat).multipliedBy(new BigNumber(tradeConst.EXT_SERVICE_FEE)).toNumber();
         let defaultAmountBuyFiatWithFee: number = new BigNumber(defaultAmountBuyFiatFee).plus(new BigNumber(defaultAmountBuyFiat)).toNumber();
 
         /** Check min crypto to buy **/
         if (defaultAmountBuyFiatWithFee > accountBalance) {
             cryptoToBuy = new BigNumber(tradeConst.BTC_MIN_AMOUNT).toNumber();
-            defaultAmountBuyFiat = new BigNumber(exchangeFromOrderBook).multipliedBy(new BigNumber(cryptoToBuy)).toNumber();
+            defaultAmountBuyFiat = new BigNumber(finalExchange).multipliedBy(new BigNumber(cryptoToBuy)).toNumber();
             defaultAmountBuyFiatFee = new BigNumber(defaultAmountBuyFiat).multipliedBy(new BigNumber(tradeConst.EXT_SERVICE_FEE)).toNumber();
             defaultAmountBuyFiatWithFee = new BigNumber(defaultAmountBuyFiatFee).plus(new BigNumber(defaultAmountBuyFiat)).toNumber();
 
@@ -131,7 +140,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
             post_only: 'false',
             product_id: coupleType,
             size: cryptoToBuy,
-            price: exchangeFromOrderBook,
+            price: finalExchange,
             client_oid: transactionId,
         };
 
