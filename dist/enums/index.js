@@ -10,3 +10,4 @@ __export(require("./status-code"));
 __export(require("./couple-type"));
 __export(require("./validation-const"));
 __export(require("./crypto-amount"));
+__export(require("./status-transaction"));

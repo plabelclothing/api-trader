@@ -5,3 +5,4 @@ export * from './status-code';
 export * from './couple-type';
 export * from './validation-const';
 export * from './crypto-amount';
+export * from './status-transaction';

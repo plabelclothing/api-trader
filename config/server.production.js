@@ -51,3 +51,7 @@ config.trade = {
 	},
 	serviceFee:      {{ api_trader_trade_service_fee }},
 };
+
+config.assets = {
+	waitTransactionFilePath: '{{ api_trader_assets_wait_transaction_path }}'
+};
