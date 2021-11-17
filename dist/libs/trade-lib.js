@@ -79,16 +79,6 @@ const buyCrypto = async (type) => {
             return;
         }
         let cryptoToBuy = new bignumber_js_1.default(tradeConst.CRYPTO_BUY_AMOUNT[type]).toNumber();
-        // const exchangeFromOrderBookSale = new BigNumber(finalExchange).multipliedBy(0.01).toNumber();
-        // finalExchange = new BigNumber(finalExchange).minus(new BigNumber(exchangeFromOrderBookSale)).toFixed(2);
-        // /** if amount crypto is smaller than i want to buy **/
-        // if (new BigNumber(asks[0][1]).toNumber() < tradeConst.CRYPTO_BUY_AMOUNT[type]) {
-        //     let sumExchange = 0;
-        //     for (let i = 0; i < 3; i++) {
-        //         sumExchange = new BigNumber(sumExchange).plus(new BigNumber(asks[i][0])).toNumber();
-        //     }
-        //     finalExchange = new BigNumber(sumExchange).dividedBy(3).toFixed(2);
-        // }
         /** Check account balance default amount **/
         let defaultAmountBuyFiat = new bignumber_js_1.default(finalExchange).multipliedBy(new bignumber_js_1.default(cryptoToBuy)).toNumber();
         let defaultAmountBuyFiatFee = new bignumber_js_1.default(defaultAmountBuyFiat).multipliedBy(new bignumber_js_1.default(tradeConst.EXT_SERVICE_FEE)).toNumber();
@@ -238,6 +228,7 @@ const sellCrypto = async (objRabbit) => {
         });
     }
     catch (e) {
+        console.log(JSON.stringify(e));
         throw e;
     }
 };
