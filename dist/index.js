@@ -42,6 +42,7 @@ utils_1.logger.log("info" /* INFO */, utils_1.loggerMessage({
         Promise.resolve().then(() => __importStar(require('./bin/server')));
         await process_env_init_1.setStartParams();
         Promise.resolve().then(() => __importStar(require('./bin/cron')));
+        Promise.resolve().then(() => __importStar(require('./bin/services')));
     }
     catch (e) {
         utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({

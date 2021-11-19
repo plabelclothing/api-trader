@@ -29,15 +29,15 @@ RabbitUtil.getConnection = () => {
     return connection;
 };
 
-RabbitUtil.sendToRabbit = (message: { [key: string]: any }, delayData: { delay: number, routingKey: string } | null) => {
+RabbitUtil.sendToRabbit = (message: { [key: string]: any }, delayData: { delay: number, routingKey: string } | null, isFee: boolean) => {
     return new Promise((resolve, reject) => {
         try {
             if (!channel) {
                 throw new Error('Rabbit channel is not exist');
             }
 
-            let rabbitExchange = config.rabbitMQ.exchange;
-            let rabbitChannel = config.rabbitMQ.channel;
+            let rabbitExchange = isFee ? config.rabbitMQ.exchangeFee : config.rabbitMQ.exchange;
+            let rabbitChannel = isFee ? config.rabbitMQ.channelFee : config.rabbitMQ.channel;
 
             const reqHeaders: Utils.RabbitRequestHeaders = {
                 persistent: true,
@@ -57,7 +57,7 @@ RabbitUtil.sendToRabbit = (message: { [key: string]: any }, delayData: { delay: 
                 } = delayData;
 
                 reqHeaders.expiration = delay;
-                rabbitExchange = config.rabbitMQ.deadLetterExchange.exchange;
+                rabbitExchange = isFee ? config.rabbitMQ.deadLetterExchange.exchangeFee : config.rabbitMQ.deadLetterExchange.exchange;
                 rabbitChannel = routingKey;
             }
 

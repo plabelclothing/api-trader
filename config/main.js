@@ -16,19 +16,28 @@ config.luxon = {
 config.rabbitMQ = {
 	connection:         [],
 	deadLetterExchange: {
-		exchange: 'trader_dlx',
+		exchange:    'trader_dlx',
+		exchangeFee: 'trader_dlx_fee',
 	},
 	deadLetterQueue:    {
-		key: 'trader_dlx_queue10',
-		ttl: 10000
+		sell: {
+			key: 'trader_dlx_queue5',
+			ttl: 5000
+		},
+		fee:  {
+			key: 'trader_dlx_queue60',
+			ttl: 60000
+		}
 	},
 	channel:            'trader',
+	channelFee:         'trader_fee',
 	exchange:           'trader_default',
+	exchangeFee:        'trader_fee',
 	consumerOptions:    {
 		noAck:     false,
 		exclusive: false
 	},
-	consumerPrefetch:   5,
+	consumerPrefetch:   1,
 	reconnectPeriod:    5000
 };
 
@@ -87,7 +96,15 @@ config.trade = {
 };
 
 config.assets = {
-	waitTransactionFilePath: ''
+	waitTransactionFilePath: {
+		'BTC-USD': '',
+		'BTC-EUR': '',
+	},
+};
+
+config.profile = {
+	trade:  '',
+	saving: ''
 };
 
 module.exports = config;

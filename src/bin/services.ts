@@ -24,12 +24,26 @@ const consumer = async function (channel: ConfirmChannel) {
             autoDelete: false,
             durable: true
         });
+
+        await channel.assertExchange(config.rabbitMQ.deadLetterExchange.exchangeFee, 'direct');
+        await channel.assertExchange(config.rabbitMQ.exchangeFee, 'fanout', {
+            autoDelete: false,
+            durable: true
+        });
+
         await channel.assertQueue(config.rabbitMQ.channel);
         await channel.bindQueue(config.rabbitMQ.channel, config.rabbitMQ.exchange, config.rabbitMQ.channel);
         await channel.prefetch(config.rabbitMQ.consumerPrefetch);
 
-        await channel.assertQueue(config.rabbitMQ.deadLetterQueue.key, {arguments: {'x-dead-letter-exchange': config.rabbitMQ.exchange}});
-        await channel.bindQueue(config.rabbitMQ.deadLetterQueue.key, config.rabbitMQ.deadLetterExchange.exchange, config.rabbitMQ.deadLetterQueue.key);
+        await channel.assertQueue(config.rabbitMQ.channelFee);
+        await channel.bindQueue(config.rabbitMQ.channelFee, config.rabbitMQ.exchangeFee, config.rabbitMQ.channelFee);
+        await channel.prefetch(config.rabbitMQ.consumerPrefetch);
+
+        await channel.assertQueue(config.rabbitMQ.deadLetterQueue.sell.key, {arguments: {'x-dead-letter-exchange': config.rabbitMQ.exchange}});
+        await channel.bindQueue(config.rabbitMQ.deadLetterQueue.sell.key, config.rabbitMQ.deadLetterExchange.exchange, config.rabbitMQ.deadLetterQueue.sell.key);
+
+        await channel.assertQueue(config.rabbitMQ.deadLetterQueue.fee.key, {arguments: {'x-dead-letter-exchange': config.rabbitMQ.exchangeFee}});
+        await channel.bindQueue(config.rabbitMQ.deadLetterQueue.fee.key, config.rabbitMQ.deadLetterExchange.exchangeFee, config.rabbitMQ.deadLetterQueue.fee.key);
 
         logger.log(LoggerLevel.INFO, 'Connection to RabbitMQ channel succeed.');
     } catch (error) {
@@ -41,8 +55,49 @@ const consumer = async function (channel: ConfirmChannel) {
         throw error;
     }
 
+    /** Processing sell message **/
     try {
         await channel.consume(config.rabbitMQ.channel, async (message) => {
+            if (!message) {
+                return;
+            }
+
+            let transactionContent = null;
+            try {
+                transactionContent = JSON.parse(message.content.toString());
+            } catch (e) {
+                logger.log(LoggerLevel.ERROR, loggerMessage({
+                    message: 'Delivered data are not a correct JSON string.',
+                    error: e,
+                    errorCode: StatusCode.RABBIT_SERVICE__TSK_ERR,
+                }));
+                return channel.ack(message);
+            }
+
+            logger.log(LoggerLevel.VERBOSE, loggerMessage({message: 'New correct task has been received and going to be processed.'}));
+            try {
+                await sellCrypto(transactionContent);
+                channel.ack(message);
+            } catch (e) {
+                logger.log(LoggerLevel.ERROR, loggerMessage({
+                    message: 'An error occur while executing task.',
+                    errorCode: StatusCode.RABBIT_SERVICE__TSK_ERR,
+                    error: e
+                }));
+                channel.nack(message, false, false);
+            }
+        }, config.rabbitMQ.consumerOptions);
+    } catch (e) {
+        logger.log(LoggerLevel.ERROR, loggerMessage({
+            message: 'Error with get and parse message from rabbit.',
+            errorCode: StatusCode.RABBIT_SERVICE__TSK_ERR,
+            error: e
+        }));
+    }
+
+    /** Processing fee message **/
+    try {
+        await channel.consume(config.rabbitMQ.channelFee, async (message) => {
             if (!message) {
                 return;
             }

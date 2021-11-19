@@ -6,17 +6,22 @@ import BigNumber from 'bignumber.js';
 
 /** Locale modules **/
 import config from '../bin/config';
-import {getAll} from '../bin/process-env-init';
 import {Utils} from '../types/utils';
-import {Bin} from "../types/bin";
 
-const waitTrxUtil = (price: number, amount: number) => {
+/**
+ * Merge not sold crypto
+ * @param price
+ * @param amount
+ * @param cryptoMinAmount
+ * @param typeCrypto
+ */
+const waitTrxUtil = (price: number, amount: number, cryptoMinAmount: number, typeCrypto: string) => {
     try {
-        const tradeConst: Bin.ProcessTradeConst = getAll();
         let arrForCreateTrx: Utils.WaitTrxObj[] = [];
+        const pathToFile = config.assets.waitTransactionFilePath[typeCrypto];
 
         /** Read file **/
-        const fileContent = fs.readFileSync(config.assets.waitTransactionFilePath).toString();
+        const fileContent = fs.readFileSync(pathToFile).toString();
         let arrTrx: Utils.WaitTrxObj[] = [];
         try {
             arrTrx = JSON.parse(fileContent);
@@ -30,7 +35,7 @@ const waitTrxUtil = (price: number, amount: number) => {
                 p: price,
             });
 
-            fs.writeFileSync(config.assets.waitTransactionFilePath, JSON.stringify(arrTrx));
+            fs.writeFileSync(pathToFile, JSON.stringify(arrTrx));
             return arrForCreateTrx;
         }
 
@@ -48,8 +53,8 @@ const waitTrxUtil = (price: number, amount: number) => {
             });
         }
 
-        if (passedAmount >= tradeConst.BTC_MIN_AMOUNT) {
-            fs.writeFileSync(config.assets.waitTransactionFilePath, JSON.stringify(newArrTrx));
+        if (passedAmount >= cryptoMinAmount) {
+            fs.writeFileSync(pathToFile, JSON.stringify(newArrTrx));
             arrForCreateTrx.push({
                 p: price,
                 a: passedAmount,
@@ -62,7 +67,7 @@ const waitTrxUtil = (price: number, amount: number) => {
             a: amount,
         });
 
-        fs.writeFileSync(config.assets.waitTransactionFilePath, JSON.stringify(arrTrx));
+        fs.writeFileSync(pathToFile, JSON.stringify(arrTrx));
         return arrForCreateTrx;
     } catch (e) {
         throw e;

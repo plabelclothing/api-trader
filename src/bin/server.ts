@@ -49,7 +49,6 @@ try {
     logger.log(LoggerLevel.INFO, loggerMessage({
         message: `API endpoint started at ${config.expressApi.bind}:${config.expressApi.port}`
     }));
-    import('../bin/services');
 } catch (e) {
     logger.log(LoggerLevel.ERROR, loggerMessage({
         message: 'Error starting API!',

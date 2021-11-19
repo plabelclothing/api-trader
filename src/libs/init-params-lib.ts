@@ -17,7 +17,7 @@ const getMinAmount = async (type: string) => {
         const requestPath = `/products/${type}`;
         const method = 'GET';
 
-        const sign = await signUtil(timestamp, requestPath, null, method);
+        const sign = signUtil(timestamp, requestPath, null, method);
 
         const result = await axios({
             url: `${config.coinbase.host}${requestPath}`,
@@ -49,7 +49,7 @@ const getAccountsId = async () => {
         const requestPath = `/accounts`;
         const method = 'GET';
 
-        const sign = await signUtil(timestamp, requestPath, null, method);
+        const sign = signUtil(timestamp, requestPath, null, method);
 
         const result = await axios({
             url: `${config.coinbase.host}${requestPath}`,
@@ -85,7 +85,7 @@ const getFee = async () => {
         const requestPath = `/fees`;
         const method = 'GET';
 
-        const sign = await signUtil(timestamp, requestPath, null, method);
+        const sign = signUtil(timestamp, requestPath, null, method);
 
         const result = await axios({
             url: `${config.coinbase.host}${requestPath}`,

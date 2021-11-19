@@ -12,6 +12,7 @@ import {
     LoggerLevel,
     CoupleType,
     StatusTransaction,
+    CoupleTypeMinAmount,
 } from '../enums';
 import config from '../bin/config';
 import {logger, loggerMessage, signUtil, RabbitUtil, waitTrxUtil} from '../utils';
@@ -45,7 +46,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         const requestPathAccountBalance = `/accounts/${accountId}`;
         const methodAccountBalance = 'GET';
 
-        const sign = await signUtil(timestampAccountBalance, requestPathAccountBalance, null, methodAccountBalance);
+        const sign = signUtil(timestampAccountBalance, requestPathAccountBalance, null, methodAccountBalance);
 
         const resultOfGetBalance = await axios({
             url: `${config.coinbase.host}${requestPathAccountBalance}`,
@@ -70,7 +71,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         const requestPathOrderBook = `/products/${coupleType}/book?level=1`;
         const methodOrderBook = 'GET';
 
-        const signOrderBook = await signUtil(timestampOrderBook, requestPathOrderBook, null, methodOrderBook);
+        const signOrderBook = signUtil(timestampOrderBook, requestPathOrderBook, null, methodOrderBook);
 
         const resultOfGetOrderBook = await axios({
             url: `${config.coinbase.host}${requestPathOrderBook}`,
@@ -134,7 +135,7 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
             client_oid: transactionId,
         };
 
-        const signOrder = await signUtil(timestampOrder, requestPathOrder, bodyOrder, methodOrder);
+        const signOrder = signUtil(timestampOrder, requestPathOrder, bodyOrder, methodOrder);
 
         await axios({
             url: `${config.coinbase.host}${requestPathOrder}`,
@@ -152,13 +153,14 @@ const buyCrypto = async (type: keyof typeof CoupleTypeIsTrade) => {
         /** Send to rabbit **/
         const objRabbit: Libs.ObjRabbit = {
             i: transactionId,
+            c: 0,
         };
 
         try {
             await RabbitUtil.sendToRabbit(objRabbit, {
-                delay: config.rabbitMQ.deadLetterQueue.ttl,
-                routingKey: config.rabbitMQ.deadLetterQueue.key,
-            });
+                delay: config.rabbitMQ.deadLetterQueue.sell.ttl,
+                routingKey: config.rabbitMQ.deadLetterQueue.sell.key,
+            }, false);
         } catch (e) {
             logger.log(LoggerLevel.ERROR, loggerMessage({
                 message: `Crypto deal ${type} is not send to rabbit. Id: ${transactionId}`,
@@ -183,7 +185,7 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
         const requestPathOrder = `/orders/client:${objRabbit.i}`;
         const methodOrder = 'GET';
 
-        const signOrder = await signUtil(timestampOrder, requestPathOrder, null, methodOrder);
+        const signOrder = signUtil(timestampOrder, requestPathOrder, null, methodOrder);
 
         const resultOfGetOrder = await axios({
             url: `${config.coinbase.host}${requestPathOrder}`,
@@ -199,12 +201,13 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
 
         const finalStatus = [StatusTransaction.DONE, StatusTransaction.REJECTED];
 
-        if (!finalStatus.includes(resultOfGetOrder.data.status)) {
+        if (!finalStatus.includes(resultOfGetOrder.data.status) && objRabbit.c < 2) {
             try {
+                objRabbit.c++;
                 return RabbitUtil.sendToRabbit(objRabbit, {
-                    delay: config.rabbitMQ.deadLetterQueue.ttl,
-                    routingKey: config.rabbitMQ.deadLetterQueue.key,
-                });
+                    delay: config.rabbitMQ.deadLetterQueue.sell.ttl,
+                    routingKey: config.rabbitMQ.deadLetterQueue.sell.key,
+                }, false);
             } catch (e) {
                 logger.log(LoggerLevel.ERROR, loggerMessage({
                     message: `Crypto deal ${resultOfGetOrder.data.product_id} is not send to rabbit. Id: ${objRabbit.i}`,
@@ -212,10 +215,27 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
             }
         }
 
+        /** If time is ended and bought crypto is 0 create a cancel **/
         let boughtCrypto = new BigNumber(resultOfGetOrder.data.filled_size).toNumber();
 
         if (boughtCrypto <= 0) {
-            return;
+            const timestampCancelOrder = Date.now() / 1000;
+            const requestPathCancelOrder = `/orders/client:${objRabbit.i}`;
+            const methodCancelOrder = 'DELETE';
+
+            const signCancelOrder = signUtil(timestampCancelOrder, requestPathCancelOrder, null, methodCancelOrder);
+
+            return axios({
+                url: `${config.coinbase.host}${requestPathCancelOrder}`,
+                method: methodCancelOrder,
+                headers: {
+                    'Accept': 'application/json',
+                    'cb-access-key': config.coinbase.key,
+                    'cb-access-passphrase': passphrase,
+                    'cb-access-sign': signCancelOrder,
+                    'cb-access-timestamp': timestampCancelOrder
+                }
+            });
         }
 
         /** Create price **/
@@ -227,8 +247,10 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
         let finalPrice = new BigNumber(priceWithExtFee).dividedBy(boughtCrypto).toFixed(2);
 
         /** If bought crypto is smaller than crypto Min **/
-        if (boughtCrypto < tradeConst.BTC_MIN_AMOUNT) {
-            const resultOfWaitTransaction = <Utils.WaitTrxObj[]>waitTrxUtil(new BigNumber(finalPrice).toNumber(), boughtCrypto);
+        const amountMinKey = CoupleTypeMinAmount[<keyof typeof CoupleTypeMinAmount>resultOfGetOrder.data.product_id];
+        const cryptoMinAmount = <number>tradeConst[<keyof typeof tradeConst>amountMinKey];
+        if (boughtCrypto < cryptoMinAmount) {
+            const resultOfWaitTransaction = <Utils.WaitTrxObj[]>waitTrxUtil(new BigNumber(finalPrice).toNumber(), boughtCrypto, cryptoMinAmount, resultOfGetOrder.data.product_id);
             if (!resultOfWaitTransaction.length) {
                 return;
             }
@@ -254,7 +276,7 @@ const sellCrypto = async (objRabbit: Libs.ObjRabbit) => {
             client_oid: transactionId,
         };
 
-        const signOrderSell = await signUtil(timestampOrderSell, requestPathOrderSell, bodyOrderSell, methodOrderSell);
+        const signOrderSell = signUtil(timestampOrderSell, requestPathOrderSell, bodyOrderSell, methodOrderSell);
 
         await axios({
             url: `${config.coinbase.host}${requestPathOrderSell}`,

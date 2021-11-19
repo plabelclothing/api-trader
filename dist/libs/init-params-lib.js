@@ -19,7 +19,7 @@ const getMinAmount = async (type) => {
         const passphrase = config_1.default.coinbase.passphrase;
         const requestPath = `/products/${type}`;
         const method = 'GET';
-        const sign = await utils_1.signUtil(timestamp, requestPath, null, method);
+        const sign = utils_1.signUtil(timestamp, requestPath, null, method);
         const result = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPath}`,
             method,
@@ -48,7 +48,7 @@ const getAccountsId = async () => {
         const passphrase = config_1.default.coinbase.passphrase;
         const requestPath = `/accounts`;
         const method = 'GET';
-        const sign = await utils_1.signUtil(timestamp, requestPath, null, method);
+        const sign = utils_1.signUtil(timestamp, requestPath, null, method);
         const result = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPath}`,
             method,
@@ -80,7 +80,7 @@ const getFee = async () => {
         const passphrase = config_1.default.coinbase.passphrase;
         const requestPath = `/fees`;
         const method = 'GET';
-        const sign = await utils_1.signUtil(timestamp, requestPath, null, method);
+        const sign = utils_1.signUtil(timestamp, requestPath, null, method);
         const result = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPath}`,
             method,

@@ -35,7 +35,7 @@ const buyCrypto = async (type) => {
         const timestampAccountBalance = Date.now() / 1000;
         const requestPathAccountBalance = `/accounts/${accountId}`;
         const methodAccountBalance = 'GET';
-        const sign = await utils_1.signUtil(timestampAccountBalance, requestPathAccountBalance, null, methodAccountBalance);
+        const sign = utils_1.signUtil(timestampAccountBalance, requestPathAccountBalance, null, methodAccountBalance);
         const resultOfGetBalance = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPathAccountBalance}`,
             method: methodAccountBalance,
@@ -55,7 +55,7 @@ const buyCrypto = async (type) => {
         const timestampOrderBook = Date.now() / 1000;
         const requestPathOrderBook = `/products/${coupleType}/book?level=1`;
         const methodOrderBook = 'GET';
-        const signOrderBook = await utils_1.signUtil(timestampOrderBook, requestPathOrderBook, null, methodOrderBook);
+        const signOrderBook = utils_1.signUtil(timestampOrderBook, requestPathOrderBook, null, methodOrderBook);
         const resultOfGetOrderBook = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPathOrderBook}`,
             method: methodOrderBook,
@@ -109,7 +109,7 @@ const buyCrypto = async (type) => {
             price: finalExchange,
             client_oid: transactionId,
         };
-        const signOrder = await utils_1.signUtil(timestampOrder, requestPathOrder, bodyOrder, methodOrder);
+        const signOrder = utils_1.signUtil(timestampOrder, requestPathOrder, bodyOrder, methodOrder);
         await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPathOrder}`,
             method: methodOrder,
@@ -125,12 +125,13 @@ const buyCrypto = async (type) => {
         /** Send to rabbit **/
         const objRabbit = {
             i: transactionId,
+            c: 0,
         };
         try {
             await utils_1.RabbitUtil.sendToRabbit(objRabbit, {
-                delay: config_1.default.rabbitMQ.deadLetterQueue.ttl,
-                routingKey: config_1.default.rabbitMQ.deadLetterQueue.key,
-            });
+                delay: config_1.default.rabbitMQ.deadLetterQueue.sell.ttl,
+                routingKey: config_1.default.rabbitMQ.deadLetterQueue.sell.key,
+            }, false);
         }
         catch (e) {
             utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
@@ -155,7 +156,7 @@ const sellCrypto = async (objRabbit) => {
         const timestampOrder = Date.now() / 1000;
         const requestPathOrder = `/orders/client:${objRabbit.i}`;
         const methodOrder = 'GET';
-        const signOrder = await utils_1.signUtil(timestampOrder, requestPathOrder, null, methodOrder);
+        const signOrder = utils_1.signUtil(timestampOrder, requestPathOrder, null, methodOrder);
         const resultOfGetOrder = await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPathOrder}`,
             method: methodOrder,
@@ -168,12 +169,13 @@ const sellCrypto = async (objRabbit) => {
             }
         });
         const finalStatus = [enums_1.StatusTransaction.DONE, enums_1.StatusTransaction.REJECTED];
-        if (!finalStatus.includes(resultOfGetOrder.data.status)) {
+        if (!finalStatus.includes(resultOfGetOrder.data.status) && objRabbit.c < 2) {
             try {
+                objRabbit.c++;
                 return utils_1.RabbitUtil.sendToRabbit(objRabbit, {
-                    delay: config_1.default.rabbitMQ.deadLetterQueue.ttl,
-                    routingKey: config_1.default.rabbitMQ.deadLetterQueue.key,
-                });
+                    delay: config_1.default.rabbitMQ.deadLetterQueue.sell.ttl,
+                    routingKey: config_1.default.rabbitMQ.deadLetterQueue.sell.key,
+                }, false);
             }
             catch (e) {
                 utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
@@ -181,9 +183,24 @@ const sellCrypto = async (objRabbit) => {
                 }));
             }
         }
+        /** If time is ended and bought crypto is 0 create a cancel **/
         let boughtCrypto = new bignumber_js_1.default(resultOfGetOrder.data.filled_size).toNumber();
         if (boughtCrypto <= 0) {
-            return;
+            const timestampCancelOrder = Date.now() / 1000;
+            const requestPathCancelOrder = `/orders/client:${objRabbit.i}`;
+            const methodCancelOrder = 'DELETE';
+            const signCancelOrder = utils_1.signUtil(timestampCancelOrder, requestPathCancelOrder, null, methodCancelOrder);
+            return axios_1.default({
+                url: `${config_1.default.coinbase.host}${requestPathCancelOrder}`,
+                method: methodCancelOrder,
+                headers: {
+                    'Accept': 'application/json',
+                    'cb-access-key': config_1.default.coinbase.key,
+                    'cb-access-passphrase': passphrase,
+                    'cb-access-sign': signCancelOrder,
+                    'cb-access-timestamp': timestampCancelOrder
+                }
+            });
         }
         /** Create price **/
         const fillFees = new bignumber_js_1.default(resultOfGetOrder.data.fill_fees).toNumber();
@@ -193,8 +210,10 @@ const sellCrypto = async (objRabbit) => {
         const priceWithExtFee = new bignumber_js_1.default(priceWithServiceFee).multipliedBy(tradeConst.EXT_SERVICE_FEE).plus(new bignumber_js_1.default(priceWithServiceFee)).toNumber();
         let finalPrice = new bignumber_js_1.default(priceWithExtFee).dividedBy(boughtCrypto).toFixed(2);
         /** If bought crypto is smaller than crypto Min **/
-        if (boughtCrypto < tradeConst.BTC_MIN_AMOUNT) {
-            const resultOfWaitTransaction = utils_1.waitTrxUtil(new bignumber_js_1.default(finalPrice).toNumber(), boughtCrypto);
+        const amountMinKey = enums_1.CoupleTypeMinAmount[resultOfGetOrder.data.product_id];
+        const cryptoMinAmount = tradeConst[amountMinKey];
+        if (boughtCrypto < cryptoMinAmount) {
+            const resultOfWaitTransaction = utils_1.waitTrxUtil(new bignumber_js_1.default(finalPrice).toNumber(), boughtCrypto, cryptoMinAmount, resultOfGetOrder.data.product_id);
             if (!resultOfWaitTransaction.length) {
                 return;
             }
@@ -218,7 +237,7 @@ const sellCrypto = async (objRabbit) => {
             price: finalPrice,
             client_oid: transactionId,
         };
-        const signOrderSell = await utils_1.signUtil(timestampOrderSell, requestPathOrderSell, bodyOrderSell, methodOrderSell);
+        const signOrderSell = utils_1.signUtil(timestampOrderSell, requestPathOrderSell, bodyOrderSell, methodOrderSell);
         await axios_1.default({
             url: `${config_1.default.coinbase.host}${requestPathOrderSell}`,
             method: methodOrderSell,

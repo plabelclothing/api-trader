@@ -24,11 +24,21 @@ const consumer = async function (channel) {
             autoDelete: false,
             durable: true
         });
+        await channel.assertExchange(config_1.default.rabbitMQ.deadLetterExchange.exchangeFee, 'direct');
+        await channel.assertExchange(config_1.default.rabbitMQ.exchangeFee, 'fanout', {
+            autoDelete: false,
+            durable: true
+        });
         await channel.assertQueue(config_1.default.rabbitMQ.channel);
         await channel.bindQueue(config_1.default.rabbitMQ.channel, config_1.default.rabbitMQ.exchange, config_1.default.rabbitMQ.channel);
         await channel.prefetch(config_1.default.rabbitMQ.consumerPrefetch);
-        await channel.assertQueue(config_1.default.rabbitMQ.deadLetterQueue.key, { arguments: { 'x-dead-letter-exchange': config_1.default.rabbitMQ.exchange } });
-        await channel.bindQueue(config_1.default.rabbitMQ.deadLetterQueue.key, config_1.default.rabbitMQ.deadLetterExchange.exchange, config_1.default.rabbitMQ.deadLetterQueue.key);
+        await channel.assertQueue(config_1.default.rabbitMQ.channelFee);
+        await channel.bindQueue(config_1.default.rabbitMQ.channelFee, config_1.default.rabbitMQ.exchangeFee, config_1.default.rabbitMQ.channelFee);
+        await channel.prefetch(config_1.default.rabbitMQ.consumerPrefetch);
+        await channel.assertQueue(config_1.default.rabbitMQ.deadLetterQueue.sell.key, { arguments: { 'x-dead-letter-exchange': config_1.default.rabbitMQ.exchange } });
+        await channel.bindQueue(config_1.default.rabbitMQ.deadLetterQueue.sell.key, config_1.default.rabbitMQ.deadLetterExchange.exchange, config_1.default.rabbitMQ.deadLetterQueue.sell.key);
+        await channel.assertQueue(config_1.default.rabbitMQ.deadLetterQueue.fee.key, { arguments: { 'x-dead-letter-exchange': config_1.default.rabbitMQ.exchangeFee } });
+        await channel.bindQueue(config_1.default.rabbitMQ.deadLetterQueue.fee.key, config_1.default.rabbitMQ.deadLetterExchange.exchangeFee, config_1.default.rabbitMQ.deadLetterQueue.fee.key);
         utils_1.logger.log("info" /* INFO */, 'Connection to RabbitMQ channel succeed.');
     }
     catch (error) {
@@ -39,8 +49,49 @@ const consumer = async function (channel) {
         }));
         throw error;
     }
+    /** Processing sell message **/
     try {
         await channel.consume(config_1.default.rabbitMQ.channel, async (message) => {
+            if (!message) {
+                return;
+            }
+            let transactionContent = null;
+            try {
+                transactionContent = JSON.parse(message.content.toString());
+            }
+            catch (e) {
+                utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
+                    message: 'Delivered data are not a correct JSON string.',
+                    error: e,
+                    errorCode: "SRC-RABBIT-002-TSCERR" /* RABBIT_SERVICE__TSK_ERR */,
+                }));
+                return channel.ack(message);
+            }
+            utils_1.logger.log("verbose" /* VERBOSE */, utils_1.loggerMessage({ message: 'New correct task has been received and going to be processed.' }));
+            try {
+                await libs_1.sellCrypto(transactionContent);
+                channel.ack(message);
+            }
+            catch (e) {
+                utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
+                    message: 'An error occur while executing task.',
+                    errorCode: "SRC-RABBIT-002-TSCERR" /* RABBIT_SERVICE__TSK_ERR */,
+                    error: e
+                }));
+                channel.nack(message, false, false);
+            }
+        }, config_1.default.rabbitMQ.consumerOptions);
+    }
+    catch (e) {
+        utils_1.logger.log("error" /* ERROR */, utils_1.loggerMessage({
+            message: 'Error with get and parse message from rabbit.',
+            errorCode: "SRC-RABBIT-002-TSCERR" /* RABBIT_SERVICE__TSK_ERR */,
+            error: e
+        }));
+    }
+    /** Processing fee message **/
+    try {
+        await channel.consume(config_1.default.rabbitMQ.channelFee, async (message) => {
             if (!message) {
                 return;
             }

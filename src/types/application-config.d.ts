@@ -58,7 +58,9 @@ declare module ApplicationConfig {
         deadLetterQueue: DeadLetterQueue,
         finish: Finish
         channel: string;
+        channelFee: string;
         exchange: string;
+        exchangeFee: string;
         consumerPrefetch: number;
         consumerOptions: RabbitMqConsumerOption;
         reconnectPeriod: number
@@ -73,8 +75,10 @@ declare module ApplicationConfig {
     }
 
     interface DeadLetterQueue {
-        key: string,
-        ttl: number,
+        [key: string]: {
+            key: string,
+            ttl: number,
+        }
     }
 
     interface Finish {
@@ -83,7 +87,8 @@ declare module ApplicationConfig {
     }
 
     interface DeadLetterExchange {
-        exchange: string
+        exchange: string;
+        exchangeFee: string;
     }
 
     interface RabbitMqConsumerOption {
@@ -110,7 +115,12 @@ declare module ApplicationConfig {
     }
 
     interface Assets {
-        waitTransactionFilePath: string,
+        waitTransactionFilePath: { [key: string]: string },
+    }
+
+    interface Profile {
+        trade: string,
+        saving: string,
     }
 
     export interface RootObject {
@@ -124,6 +134,7 @@ declare module ApplicationConfig {
         coinbase: CoinBase;
         trade: Trade;
         assets: Assets;
+        profile: Profile;
     }
 
 }

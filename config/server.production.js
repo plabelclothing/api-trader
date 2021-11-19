@@ -55,3 +55,15 @@ config.trade = {
 config.assets = {
 	waitTransactionFilePath: '{{ api_trader_assets_wait_transaction_path }}'
 };
+
+config.assets = {
+	waitTransactionFilePath: {
+		'BTC-USD': '{{ api_trader_assets_wait_transaction_path_btc_usd }}',
+		'BTC-EUR': '{{ api_trader_assets_wait_transaction_path_btc_eur }}',
+	}
+};
+
+config.profile = {
+	trade: '{{ api_trader_profile_trade }}',
+	saving: '{{ api_trader_profile_saving }}',
+};

@@ -9,13 +9,19 @@ const fs_1 = __importDefault(require("fs"));
 const bignumber_js_1 = __importDefault(require("bignumber.js"));
 /** Locale modules **/
 const config_1 = __importDefault(require("../bin/config"));
-const process_env_init_1 = require("../bin/process-env-init");
-const waitTrxUtil = (price, amount) => {
+/**
+ * Merge not sold crypto
+ * @param price
+ * @param amount
+ * @param cryptoMinAmount
+ * @param typeCrypto
+ */
+const waitTrxUtil = (price, amount, cryptoMinAmount, typeCrypto) => {
     try {
-        const tradeConst = process_env_init_1.getAll();
         let arrForCreateTrx = [];
+        const pathToFile = config_1.default.assets.waitTransactionFilePath[typeCrypto];
         /** Read file **/
-        const fileContent = fs_1.default.readFileSync(config_1.default.assets.waitTransactionFilePath).toString();
+        const fileContent = fs_1.default.readFileSync(pathToFile).toString();
         let arrTrx = [];
         try {
             arrTrx = JSON.parse(fileContent);
@@ -28,7 +34,7 @@ const waitTrxUtil = (price, amount) => {
                 a: amount,
                 p: price,
             });
-            fs_1.default.writeFileSync(config_1.default.assets.waitTransactionFilePath, JSON.stringify(arrTrx));
+            fs_1.default.writeFileSync(pathToFile, JSON.stringify(arrTrx));
             return arrForCreateTrx;
         }
         let newArrTrx = [];
@@ -43,8 +49,8 @@ const waitTrxUtil = (price, amount) => {
                 a: value.a,
             });
         }
-        if (passedAmount >= tradeConst.BTC_MIN_AMOUNT) {
-            fs_1.default.writeFileSync(config_1.default.assets.waitTransactionFilePath, JSON.stringify(newArrTrx));
+        if (passedAmount >= cryptoMinAmount) {
+            fs_1.default.writeFileSync(pathToFile, JSON.stringify(newArrTrx));
             arrForCreateTrx.push({
                 p: price,
                 a: passedAmount,
@@ -55,7 +61,7 @@ const waitTrxUtil = (price, amount) => {
             p: price,
             a: amount,
         });
-        fs_1.default.writeFileSync(config_1.default.assets.waitTransactionFilePath, JSON.stringify(arrTrx));
+        fs_1.default.writeFileSync(pathToFile, JSON.stringify(arrTrx));
         return arrForCreateTrx;
     }
     catch (e) {

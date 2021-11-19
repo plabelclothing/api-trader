@@ -1,6 +1,6 @@
 {
   "name": "api-trader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "api-trader",
   "scripts": {
     "development_unix_export": "export NODE_ENV=development && export DEBUG=* && ts-node-dev --respawn --transpile-only src/index.ts",
@@ -23,6 +23,7 @@
     "@types/luxon": "^1.27.0",
     "amqplib": "^0.8.0",
     "axios": "^0.21.1",
+    "big-number": "^2.0.0",
     "bignumber.js": "^9.0.0",
     "body-parser": "^1.18.3",
     "cron": "^1.8.2",

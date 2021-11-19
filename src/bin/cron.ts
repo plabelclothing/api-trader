@@ -44,7 +44,7 @@ const updateExtFee = new CronJob('0 0 */2 * * *', async () => {
 
 /** Region trade cron **/
 
-const tradeBtcEur = new CronJob('*/10 * * * * *', async () => {
+const tradeBtcEur = new CronJob('*/5 * * * * *', async () => {
     try {
         await buyCrypto(CoupleTypeIsTrade.BTC_EUR);
     } catch (error) {
@@ -55,7 +55,7 @@ const tradeBtcEur = new CronJob('*/10 * * * * *', async () => {
     }
 }, null, true, config.luxon.timezone);
 
-const tradeBtcUsd = new CronJob('*/10 * * * * *', async () => {
+const tradeBtcUsd = new CronJob('*/5 * * * * *', async () => {
     try {
         await buyCrypto(CoupleTypeIsTrade.BTC_USD);
     } catch (error) {

@@ -35,6 +35,7 @@ logger.log(LoggerLevel.INFO, loggerMessage({
         import('./bin/server');
         await setStartParams();
         import('./bin/cron');
+        import('./bin/services');
     } catch (e) {
         logger.log(LoggerLevel.ERROR, loggerMessage({
             message: 'Application run details.',

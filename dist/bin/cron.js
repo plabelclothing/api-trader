@@ -44,7 +44,7 @@ const updateExtFee = new cron_1.CronJob('0 0 */2 * * *', async () => {
 }, null, true, config_1.default.luxon.timezone);
 /** End region update trade const **/
 /** Region trade cron **/
-const tradeBtcEur = new cron_1.CronJob('*/10 * * * * *', async () => {
+const tradeBtcEur = new cron_1.CronJob('*/5 * * * * *', async () => {
     try {
         await libs_1.buyCrypto(enums_1.CoupleTypeIsTrade.BTC_EUR);
     }
@@ -55,7 +55,7 @@ const tradeBtcEur = new cron_1.CronJob('*/10 * * * * *', async () => {
         }));
     }
 }, null, true, config_1.default.luxon.timezone);
-const tradeBtcUsd = new cron_1.CronJob('*/10 * * * * *', async () => {
+const tradeBtcUsd = new cron_1.CronJob('*/5 * * * * *', async () => {
     try {
         await libs_1.buyCrypto(enums_1.CoupleTypeIsTrade.BTC_USD);
     }
